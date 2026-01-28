@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     zed.enableObjectDetection(obj_param);
 
     ObjectDetectionRuntimeParameters obj_runtime_param;
-    obj_runtime_param.detection_confidence_threshold = 40;
+    obj_runtime_param.detection_confidence_threshold = 70;
     obj_runtime_param.object_class_filter.push_back(OBJECT_CLASS::PERSON);
 
     Objects objects;
