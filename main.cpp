@@ -1,123 +1,83 @@
-// main.cpp - PHIÊN BẢN CÓ GIAO DIỆN OPENCV
 #include <sl/Camera.hpp>
-#include <iostream>
-#include <cmath>
-// Thêm thư viện OpenCV
 #include <opencv2/opencv.hpp>
+#include <iostream>
+
+// Gọi 2 module vào
+#include "modules/person.hpp"
+#include "modules/IMU.hpp"
 
 using namespace sl;
 using namespace std;
 
-// Hàm chuyển đổi từ sl::Mat (ZED) sang cv::Mat (OpenCV)
-// Vì ZED dùng GPU/CPU memory riêng, ta cần ánh xạ dữ liệu qua
-cv::Mat slMat2cvMat(Mat& input) {
-    // Lưu ý: ZED SDK trả về định dạng BGRA (4 kênh màu)
-    int cv_type = CV_8UC4; 
-    return cv::Mat(input.getHeight(), input.getWidth(), cv_type, input.getPtr<sl::uchar1>(MEM::CPU));
-}
-
 int main(int argc, char **argv) {
-    // 1. KHỞI TẠO CAMERA
+    // 1. KHỞI TẠO CAMERA (CHỈ LÀM 1 LẦN Ở ĐÂY)
     Camera zed;
     InitParameters init_parameters;
-    init_parameters.camera_resolution = RESOLUTION::VGA; // Giữ VGA cho nhẹ
-    init_parameters.camera_fps = 30; // 30 FPS nhìn cho mượt
+    init_parameters.camera_resolution = RESOLUTION::VGA; 
+    init_parameters.camera_fps = 30;
     init_parameters.depth_mode = DEPTH_MODE::PERFORMANCE;
     init_parameters.coordinate_units = UNIT::METER;
     init_parameters.coordinate_system = COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
 
     ERROR_CODE err = zed.open(init_parameters);
     if (err != ERROR_CODE::SUCCESS) {
-        cout << "Loi: Khong mo duoc Camera (" << err << ")" << endl;
+        cout << "Loi Camera: " << err << endl;
         return 1;
     }
 
-    // 2. BẬT TRACKING & DETECTION
-    PositionalTrackingParameters tracking_parameters;
-    zed.enablePositionalTracking(tracking_parameters);
+    // 2. KHỞI TẠO CÁC MODULE CON
+    person myPerson;
+    IMU myIMU;
 
-    ObjectDetectionParameters obj_param;
-    obj_param.enable_tracking = true;
-    obj_param.detection_model = DETECTION_MODEL::MULTI_CLASS_BOX;
+    // Cài đặt thông số cho Vision (truyền biến zed vào để nó setup)
+    myPerson.init(zed);
 
-    zed.enableObjectDetection(obj_param);
-
-    ObjectDetectionRuntimeParameters obj_runtime_param;
-    obj_runtime_param.detection_confidence_threshold = 70;
-    obj_runtime_param.object_class_filter.push_back(OBJECT_CLASS::PERSON);
-
-    Objects objects;
-    
-    // Tạo biến ảnh ZED và ảnh OpenCV
-    sl::Mat image_zed; 
-    cv::Mat image_ocv;
-    
-    // Tên cửa sổ
-    string window_name = "ZED Robot Vision";
+    // 3. VÒNG LẶP CHÍNH
+    string window_name = "Robot Control Center";
     cv::namedWindow(window_name, cv::WINDOW_AUTOSIZE);
-
-    cout << ">>> ROBOT VISION GUI STARTED - Nhan 'q' de thoat <<<" << endl;
+    
+    cout << "--- ROBOT STARTED ---" << endl;
 
     char key = ' ';
     while (key != 'q') {
         if (zed.grab() == ERROR_CODE::SUCCESS) {
-            // 1. Lấy dữ liệu vật thể
-            zed.retrieveObjects(objects, obj_runtime_param);
             
-            // 2. Lấy hình ảnh từ Camera (Mắt trái)
-            zed.retrieveImage(image_zed, VIEW::LEFT, MEM::CPU); // Lấy về RAM CPU
-            
-            // 3. Chuyển sang định dạng OpenCV để vẽ
-            image_ocv = slMat2cvMat(image_zed);
+            // --- GIAO VIỆC 1: Xử lý hình ảnh & Nhận diện ---
+            cv::Mat display_img = myPerson.updateAndDraw(zed);
 
-            // 4. Duyệt qua danh sách người và vẽ
-            if (objects.is_new) {
-                for (auto& obj : objects.object_list) {
-                    // Lấy tọa độ hộp 2D (Bounding Box)
-                    // ZED trả về 4 điểm: [0] Top-Left, [1] Top-Right, [2] Bottom-Right, [3] Bottom-Left
-                    auto top_left = obj.bounding_box_2d[0];
-                    auto bottom_right = obj.bounding_box_2d[2];
-                    
-                    // Chuyển sang Point của OpenCV
-                    cv::Point p1((int)top_left.x, (int)top_left.y);
-                    cv::Point p2((int)bottom_right.x, (int)bottom_right.y);
+            // --- GIAO VIỆC 2: Đọc cảm biến IMU ---
+            MyIMUData imuData = myIMU.getAllData(zed);
 
-                    // Tính khoảng cách
-                    float dist = sqrt(obj.position.x * obj.position.x + 
-                                      obj.position.y * obj.position.y + 
-                                      obj.position.z * obj.position.z);
+            // In ra màn hình console (hoặc gửi xuống mạch điều khiển robot)
+            if (imuData.is_valid) {
+                // Xóa màn hình cũ in đè lên cho đẹp (ANSI code)
+                cout << "\033[2J\033[1;1H"; 
+                cout << "=== ROBOT SENSOR STATUS ===" << endl;
+                
+                cout << "[GOC NGHIENG] Roll: " << imuData.roll 
+                     << " | Pitch: " << imuData.pitch 
+                     << " | Yaw: " << imuData.yaw << endl;
 
-                    // --- VẼ LÊN HÌNH ---
-                    // Màu sắc: Xanh lá (BGR: 0, 255, 0)
-                    cv::Scalar color(0, 255, 0);
-                    
-                    // Nếu gần quá (< 1.5m) thì đổi màu Đỏ cảnh báo
-                    if (dist < 1.5) color = cv::Scalar(0, 0, 255);
+                cout << "[GIA TOC m/s2] X: " << imuData.ax 
+                     << " | Y: " << imuData.ay 
+                     << " | Z: " << imuData.az << endl;
 
-                    // Vẽ hình chữ nhật
-                    cv::rectangle(image_ocv, p1, p2, color, 2);
-
-                    // Vẽ chữ (ID + Distance)
-                    string text = "ID:" + to_string(obj.id) + " | " + to_string(dist).substr(0, 3) + "m";
-                    
-                    // Vẽ nền đen cho chữ dễ đọc
-                    cv::rectangle(image_ocv, cv::Point(p1.x, p1.y - 20), cv::Point(p1.x + 150, p1.y), color, cv::FILLED);
-                    cv::putText(image_ocv, text, cv::Point(p1.x, p1.y - 5), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
-                }
+                cout << "[VAN TOC XOAY d/s]  X: " << imuData.gx 
+                     << " | Y: " << imuData.gy 
+                     << " | Z: " << imuData.gz << endl;
             }
 
-            // 5. Hiển thị lên màn hình
-            cv::imshow(window_name, image_ocv);
+            // --- HIỂN THỊ KẾT QUẢ ---
+            if (!display_img.empty()) {
+                cv::imshow(window_name, display_img);
+            }
             
-            // Chờ 10ms để bắt phím bấm (quan trọng để cửa sổ không bị treo)
             key = cv::waitKey(10);
         }
     }
 
-    // Dọn dẹp
-    zed.disableObjectDetection();
-    zed.disablePositionalTracking();
+    // 4. DỌN DẸP
+    myPerson.close(zed);
     zed.close();
-    cv::destroyAllWindows(); // Đóng cửa sổ
     return 0;
 }
