@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
             // In ra màn hình console (hoặc gửi xuống mạch điều khiển robot)
             if (imuData.is_valid) {
                 // Xóa màn hình cũ in đè lên cho đẹp (ANSI code)
-                std::cout << "\033[2J\033[1;1H"; 
+                //std::cout << "\033[2J\033[1;1H"; 
                 std::cout << "=== ROBOT SENSOR STATUS ===" << std::endl;
                 
                 std::cout << "[GOC NGHIENG] Roll: " << imuData.roll 
@@ -69,7 +69,9 @@ int main(int argc, char **argv) {
             if (!display_img.empty()) {
                 cv::imshow(window_name, display_img);
             }
-            
+            float current_fps = zed.getCurrentFPS();
+            std::cout << "FPS: " << current_fps << " Hz" << std::endl;
+
             key = cv::waitKey(10);
         }
     }
