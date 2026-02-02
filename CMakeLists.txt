@@ -43,8 +43,8 @@ include_directories(${MODULES_DIR})
 # Sử dụng đường dẫn tuyệt đối để trỏ tới các file .cpp
 add_executable(robot_main
     "${PROJECT_ROOT_DIR}/main.cpp"
-    "${MODULES_DIR}/ZedVision.cpp"
-    "${MODULES_DIR}/ZedIMU.cpp"
+    "${MODULES_DIR}/person.cpp"
+    "${MODULES_DIR}/imu.cpp"
 )
 
 # 6. Tìm thư viện ZED (.so)

@@ -1,33 +1,31 @@
 #include "person.hpp"
 #include <iostream>
 
-using namespace sl;
-using namespace std;
 
-void Person::init(Camera& zed) {
+void Person::init(sl::Camera& zed) {
     // 1. Bật Positional Tracking (Bắt buộc cho Object Detection)
-    PositionalTrackingParameters tracking_parameters;
+    sl::PositionalTrackingParameters tracking_parameters;
     zed.enablePositionalTracking(tracking_parameters);
 
     // 2. Bật Object Detection
-    ObjectDetectionParameters obj_param;
+    sl::ObjectDetectionParameters obj_param;
     obj_param.enable_tracking = true;
-    obj_param.detection_model = DETECTION_MODEL::MULTI_CLASS_BOX;
+    obj_param.detection_model = sl::DETECTION_MODEL::MULTI_CLASS_BOX;
     zed.enableObjectDetection(obj_param);
 
     // 3. Cấu hình Runtime (Độ nhạy, lọc người...)
     obj_runtime_param.detection_confidence_threshold = 70;
-    obj_runtime_param.object_class_filter = {OBJECT_CLASS::PERSON};
+    obj_runtime_param.object_class_filter = {sl::OBJECT_CLASS::PERSON};
     
-    cout << "[Module Vision] Da khoi tao xong!" << endl;
+    std::cout << "[Module Vision] Da khoi tao xong!" << std::endl;
 }
 
-cv::Mat Person::updateAndDraw(Camera& zed) {
+cv::Mat Person::updateAndDraw(sl::Camera& zed) {
     // Lấy dữ liệu vật thể
     zed.retrieveObjects(objects, obj_runtime_param);
     
     // Lấy hình ảnh (Mắt trái)
-    zed.retrieveImage(image_zed, VIEW::LEFT, MEM::CPU);
+    zed.retrieveImage(image_zed, sl::VIEW::LEFT, sl::MEM::CPU);
     
     // Chuyển sang OpenCV
     cv::Mat image_ocv = slMat2cvMat(image_zed);
@@ -42,7 +40,7 @@ cv::Mat Person::updateAndDraw(Camera& zed) {
             cv::Point p2((int)bottom_right.x, (int)bottom_right.y);
 
             // Tính khoảng cách
-            float dist = sqrt(obj.position.x * obj.position.x + 
+            float dist = std::sqrt(obj.position.x * obj.position.x + 
                               obj.position.y * obj.position.y + 
                               obj.position.z * obj.position.z);
 
@@ -52,20 +50,19 @@ cv::Mat Person::updateAndDraw(Camera& zed) {
 
             // Vẽ khung & Chữ
             cv::rectangle(image_ocv, p1, p2, color, 2);
-            string text = "ID:" + to_string(obj.id) + " | " + to_string(dist).substr(0, 3) + "m";
+            std::string text = "ID:" + std::to_string(obj.id) + " | " + std::to_string(dist).substr(0, 3) + "m";
             cv::putText(image_ocv, text, cv::Point(p1.x, p1.y - 10), cv::FONT_HERSHEY_SIMPLEX, 0.5, color, 2);
         }
     }
     return image_ocv; // Trả về ảnh đã vẽ để main hiển thị
 }
 
-void Person::close(Camera& zed) {
+void Person::close(sl::Camera& zed) {
     zed.disableObjectDetection();
     zed.disablePositionalTracking();
 }
 
 // Hàm phụ trợ (Copy từ code cũ của bạn vào đây cho gọn)
-cv::Mat Person::slMat2cvMat(Mat& input) {
-    int cv_type = CV_8UC4; 
-    return cv::Mat(input.getHeight(), input.getWidth(), cv_type, input.getPtr<sl::uchar1>(MEM::CPU));
+cv::Mat Person::slMat2cvMat(sl::Mat& input) {
+    return cv::Mat(input.getHeight(), input.getWidth(), CV_8UC4, input.getPtr<sl::uchar1>(sl::MEM::CPU));
 }

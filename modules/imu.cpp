@@ -1,13 +1,12 @@
 #include "imu.hpp"
 
-using namespace sl;
 
-MyIMUData IMU::getAllData(Camera& zed) {
+MyIMUData IMU::getAllData(sl::Camera& zed) {
     MyIMUData result;
-    SensorsData sensors_data;
+    sl::SensorsData sensors_data;
 
     // Lấy dữ liệu sensor mới nhất
-    if (zed.getSensorsData(sensors_data, TIME_REFERENCE::CURRENT) == ERROR_CODE::SUCCESS) {
+    if (zed.getSensorsData(sensors_data, sl::TIME_REFERENCE::CURRENT) == sl::ERROR_CODE::SUCCESS) {
         // Kiểm tra xem IMU có sống không [cite: 208, 221]
         if (sensors_data.imu.is_available) {
             
@@ -15,7 +14,7 @@ MyIMUData IMU::getAllData(Camera& zed) {
 
             // --- 1. LẤY ORIENTATION (Góc nghiêng) ---
             // Từ Quaternion đổi ra Euler Angles cho dễ hiểu
-            float3 euler = sensors_data.imu.pose.getRotationMatrix().getEulerAngles();
+            sl::float3 euler = sensors_data.imu.pose.getRotationMatrix().getEulerAngles();
             result.roll  = euler[0];
             result.pitch = euler[1];
             result.yaw   = euler[2];

@@ -4,43 +4,41 @@
 
 // Gọi 2 module vào
 #include "modules/person.hpp"
-#include "modules/IMU.hpp"
+#include "modules/imu.hpp"
 
-using namespace sl;
-using namespace std;
 
 int main(int argc, char **argv) {
     // 1. KHỞI TẠO CAMERA (CHỈ LÀM 1 LẦN Ở ĐÂY)
-    Camera zed;
-    InitParameters init_parameters;
-    init_parameters.camera_resolution = RESOLUTION::VGA; 
+    sl::Camera zed;
+    sl::InitParameters init_parameters;
+    init_parameters.camera_resolution = sl::RESOLUTION::VGA; 
     init_parameters.camera_fps = 30;
-    init_parameters.depth_mode = DEPTH_MODE::PERFORMANCE;
-    init_parameters.coordinate_units = UNIT::METER;
-    init_parameters.coordinate_system = COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
+    init_parameters.depth_mode = sl::DEPTH_MODE::PERFORMANCE;
+    init_parameters.coordinate_units = sl::UNIT::METER;
+    init_parameters.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Y_UP;
 
-    ERROR_CODE err = zed.open(init_parameters);
-    if (err != ERROR_CODE::SUCCESS) {
-        cout << "Loi Camera: " << err << endl;
+    sl::ERROR_CODE err = zed.open(init_parameters);
+    if (err != sl::ERROR_CODE::SUCCESS) {
+        std::cout << "Loi Camera: " << err << std::endl;
         return 1;
     }
 
     // 2. KHỞI TẠO CÁC MODULE CON
-    person myPerson;
+    Person myPerson;
     IMU myIMU;
 
     // Cài đặt thông số cho Vision (truyền biến zed vào để nó setup)
     myPerson.init(zed);
 
     // 3. VÒNG LẶP CHÍNH
-    string window_name = "Robot Control Center";
+    std::string window_name = "Robot Control Center";
     cv::namedWindow(window_name, cv::WINDOW_AUTOSIZE);
     
-    cout << "--- ROBOT STARTED ---" << endl;
+    std::cout << "--- ROBOT STARTED ---" << std::endl;
 
     char key = ' ';
     while (key != 'q') {
-        if (zed.grab() == ERROR_CODE::SUCCESS) {
+        if (zed.grab() == sl::ERROR_CODE::SUCCESS) {
             
             // --- GIAO VIỆC 1: Xử lý hình ảnh & Nhận diện ---
             cv::Mat display_img = myPerson.updateAndDraw(zed);
@@ -51,20 +49,20 @@ int main(int argc, char **argv) {
             // In ra màn hình console (hoặc gửi xuống mạch điều khiển robot)
             if (imuData.is_valid) {
                 // Xóa màn hình cũ in đè lên cho đẹp (ANSI code)
-                cout << "\033[2J\033[1;1H"; 
-                cout << "=== ROBOT SENSOR STATUS ===" << endl;
+                std::cout << "\033[2J\033[1;1H"; 
+                std::cout << "=== ROBOT SENSOR STATUS ===" << std::endl;
                 
-                cout << "[GOC NGHIENG] Roll: " << imuData.roll 
+                std::cout << "[GOC NGHIENG] Roll: " << imuData.roll 
                      << " | Pitch: " << imuData.pitch 
-                     << " | Yaw: " << imuData.yaw << endl;
+                     << " | Yaw: " << imuData.yaw << std::endl;
 
-                cout << "[GIA TOC m/s2] X: " << imuData.ax 
+                std::cout << "[GIA TOC m/s2] X: " << imuData.ax 
                      << " | Y: " << imuData.ay 
-                     << " | Z: " << imuData.az << endl;
+                     << " | Z: " << imuData.az << std::endl;
 
-                cout << "[VAN TOC XOAY d/s]  X: " << imuData.gx 
+                std::cout << "[VAN TOC XOAY d/s]  X: " << imuData.gx 
                      << " | Y: " << imuData.gy 
-                     << " | Z: " << imuData.gz << endl;
+                     << " | Z: " << imuData.gz << std::endl;
             }
 
             // --- HIỂN THỊ KẾT QUẢ ---
